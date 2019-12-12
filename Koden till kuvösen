@@ -1,0 +1,136 @@
+#include <dht.h>
+#include <LiquidCrystal.h>
+#include <AutoPID.h>
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+dht DHT;
+// Give Hum and Temp Pin numbers...
+int Hum_fan;
+int Temp_Fan; 
+
+//int Heater = 9;
+//int HeaterSpeed;
+//This Will Be for the PID SYSTEM!
+#define OUTPUT_MIN 0
+#define OUTPUT_MAX 255
+#define KP 0.12
+#define KI 0.8
+#define KD 0.003
+
+
+double HumRead, setPoint, outputHum;
+double TempRead,SetPoint,OutPutTemp;
+
+AutoPID myPID(&HumRead, &setPoint, &outputHum, OUTPUT_MIN, OUTPUT_MAX, KP, KI, KD);
+// from 100 - 255 PWM.... Needs that for temp.... 
+AutoPID my2PID(&TempRead, &SetPoint, &OutPutTemp, OUTPUT_MIN,OUTPUT_MAX,KP,KI,KD);
+
+#define DHT11_PIN 7
+
+void setup() {
+  lcd.begin(16, 2);
+  pinMode(Temp_Fan,OUTPUT);
+  pinMode(Hum_fan, OUTPUT);
+  pinMode(Heater, OUTPUT);
+  setPwmFrequency(9, 6);
+  Serial.begin(9600); 
+  myPID.setTimeStep(500);
+
+}
+
+
+void loop()
+{
+  int chk = DHT.read11(DHT11_PIN);
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(DHT.temperature);
+  lcd.print((char)223);
+  lcd.print("C");
+  lcd.setCursor(0, 1);
+  lcd.print("Humidity: ");
+  lcd.print(DHT.humidity);
+  lcd.print("%");
+  
+  PID_HUM_FAN();
+  PID_TEMP_FAN();
+  ShowValues(); // This Will Send Current Data/Values...
+  //HeaterControll();
+  delay(1250);
+}
+/*
+ * Heater Should Reach Temp Wanted
+ * And Then keep it at that point... PID system Here aswell? 
+ */
+void HeaterControll() {
+
+  HeaterSpeed = (12/12)*256;
+  
+  digitalWrite(Heater,HIGH); 
+
+}
+void PID_TEMP_FAN(){
+  
+  SetPoint = 37.00; 
+  TempRead = DHT.temperature; 
+  my2PID.run(); 
+  analogWrite(Temp_Fan, OutPutTemp); 
+  
+}
+// PID system for HUM fan....
+void PID_HUM_FAN() {
+
+  setPoint = 40.00;
+  HumRead = DHT.humidity;
+  myPID.run();
+  analogWrite(Hum_fan, outputHum);
+}
+
+
+void ShowValues() {
+  int value = DHT.humidity;
+  Serial.print((value)); //Send that the Averge Temp for 8 ticks... or 1250 * 8 =
+  Serial.print("\n");
+  value = DHT.temperature;
+  Serial.print((value));
+  Serial.print("\n");
+
+  
+}
+void setPwmFrequency(int pin, int divisor) {
+  byte mode;
+  if (pin == 5 || pin == 6 || pin == 9 || pin == 10) {
+    switch (divisor) {
+      case 1: mode = 0x01; break;
+      case 8: mode = 0x02; break;
+      case 64: mode = 0x03; break;
+      case 256: mode = 0x04; break;
+      case 1024: mode = 0x05; break;
+      default: return;
+    }
+    if (pin == 5 || pin == 6) {
+      TCCR0B = TCCR0B & 0b11111000 | mode;
+    } else {
+      TCCR1B = TCCR1B & 0b11111000 | mode;
+    }
+  } else if (pin == 3 || pin == 11) {
+    switch (divisor) {
+      case 1: mode = 0x01; break;
+      case 8: mode = 0x02; break;
+      case 32: mode = 0x03; break;
+      case 64: mode = 0x04; break;
+      case 128: mode = 0x05; break;
+      case 256: mode = 0x06; break;
+      case 1024: mode = 0x07; break;
+      default: return;
+    }
+    TCCR2B = TCCR2B & 0b11111000 | mode;
+  }
+}
+
+
+
+
+
+
