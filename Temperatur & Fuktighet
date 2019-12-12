@@ -1,0 +1,26 @@
+
+
+%% This Code Shows Real Time Data.... 
+
+b = Bluetooth('HC-06',1); %Make The Connection... 
+fopen(b); 
+
+
+amount = 60;                    % make This many Calls
+x = 0:1:amount; 
+for tick = 1:amount
+    humidity(tick) = str2num(fgetl(b));  %Read Data, Convert, Save 
+    plot(x(1:tick),humidity(1:tick),'-r'); %Plot Current Data
+    drawnow;
+    hold on     %Wait and Plot One more Thing....
+    temperature(tick) = str2num(fgetl(b));  
+    plot(x(1:tick),temperature(1:tick),'-b');
+    drawnow; 
+   
+end 
+hold off
+AvergeHum = mean(humidity); 
+AvergeTemp = mean(temperature); 
+title('Real Time data'); 
+
+fclose(b);
